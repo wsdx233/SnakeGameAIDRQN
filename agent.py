@@ -41,7 +41,10 @@ class Agent:
                 state_tensor = torch.FloatTensor(state_sequence).unsqueeze(0).to(config.DEVICE)
                 q_values, new_hidden = self.policy_net(state_tensor, self.hidden_state)
                 self.hidden_state = new_hidden
-                action_idx = q_values.max(1)[1].view(1, 1).item()
+                # 从序列Q值中选择最后一个时间步的Q值进行决策
+                # q_values shape: (1, seq_len, num_actions) -> last_q_values shape: (1, num_actions)
+                last_q_values = q_values[:, -1, :]
+                action_idx = last_q_values.max(1)[1].item()
         else:
             # 探索时，也需要前向传播来更新隐藏状态
             with torch.no_grad():
