@@ -2,6 +2,7 @@ import torch
 
 # --- 设备配置 ---
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+USE_AMP = True if DEVICE == "cuda" else False # 自动混合精度 (Automatic Mixed Precision)
 
 # --- 游戏配置 ---
 GRID_SIZE = 10  # 游戏区域大小 (GRID_SIZE x GRID_SIZE)
@@ -15,8 +16,8 @@ BURN_IN_LENGTH = 10   # “预热”序列的长度，用于生成隐藏状态
 
 # --- 训练超参数 ---
 NUM_EPISODES = 50000        # 总训练回合数
-MEMORY_SIZE = 50000         # 经验回放池大小
-BATCH_SIZE = 128            # 每批训练的样本数
+MEMORY_SIZE = 100000        # 经验回放池大小 (增加)
+BATCH_SIZE = 512            # 每批训练的样本数 (增加)
 GAMMA = 0.99                # 折扣因子
 LEARNING_RATE = 0.0005      # 学习率
 
