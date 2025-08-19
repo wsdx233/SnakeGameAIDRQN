@@ -95,10 +95,10 @@ class Agent:
 
         # 解包并堆叠
         # s_seqs shape: (BATCH_SIZE, full_seq_len, C, H, W)
-        s_seqs = np.stack(sequences[:, :, 0])
+        s_seqs = np.stack(sequences[:, :, 0]).astype(np.float32)
         a_seqs = np.stack(sequences[:, :, 1])
         r_seqs = np.stack(sequences[:, :, 2]).astype(float)
-        ns_seqs = np.stack(sequences[:, :, 3])
+        ns_seqs = np.stack(sequences[:, :, 3]).astype(np.float32)
         d_seqs = np.stack(sequences[:, :, 4]).astype(bool)
 
         # 分割 burn-in 和 training 部分
