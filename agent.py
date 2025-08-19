@@ -88,20 +88,24 @@ class Agent:
             burn_in_next_state_seqs.append(burn_in_ns)
             train_next_state_seqs.append(train_ns)
             
-            # 动作、奖励、done只取训练序列的最后一个
-            action_seqs.append(a[-1])
-            reward_seqs.append(r[-1])
-            done_flags.append(d[-1])
+            # 动作、奖励、done取整个训练序列
+            action_seqs.append(a[config.BURN_IN_LENGTH:])
+            reward_seqs.append(r[config.BURN_IN_LENGTH:])
+            done_flags.append(d[config.BURN_IN_LENGTH:])
 
         # 转换成Tensor
         burn_in_state_batch = torch.FloatTensor(np.array(burn_in_state_seqs)).to(config.DEVICE)
         train_state_batch = torch.FloatTensor(np.array(train_state_seqs)).to(config.DEVICE)
         burn_in_next_state_batch = torch.FloatTensor(np.array(burn_in_next_state_seqs)).to(config.DEVICE)
         train_next_state_batch = torch.FloatTensor(np.array(train_next_state_seqs)).to(config.DEVICE)
-        
-        action_batch = torch.LongTensor(np.argmax(action_seqs, axis=1)).unsqueeze(1).to(config.DEVICE)
-        reward_batch = torch.FloatTensor(reward_seqs).unsqueeze(1).to(config.DEVICE)
-        done_batch = torch.FloatTensor(done_flags).unsqueeze(1).to(config.DEVICE)
+
+        # action_seqs is (B, SEQ_LEN, NUM_ACTIONS) -> (B, SEQ_LEN) -> (B, SEQ_LEN, 1)
+        action_batch = torch.LongTensor(np.argmax(action_seqs, axis=2)).unsqueeze(2).to(config.DEVICE)
+        # reward_seqs is (B, SEQ_LEN) -> (B, SEQ_LEN, 1)
+        reward_batch = torch.FloatTensor(reward_seqs).unsqueeze(2).to(config.DEVICE)
+        # done_flags is (B, SEQ_LEN) -> (B, SEQ_LEN, 1)
+        done_batch = torch.FloatTensor(done_flags).unsqueeze(2).to(config.DEVICE)
+
 
         # 2. Burn-in: 生成隐藏状态
         with torch.no_grad():
@@ -114,13 +118,17 @@ class Agent:
             _, h1 = self.target_net(burn_in_next_state_batch, h1_init)
 
         # 3. 计算Q(s, a)
+        # q_values: (B, SEQ_LEN, NUM_ACTIONS)
         q_values, _ = self.policy_net(train_state_batch, h0)
-        q_s_a = q_values.gather(1, action_batch)
+        # q_s_a: (B, SEQ_LEN, 1)
+        q_s_a = q_values.gather(2, action_batch)
 
         # 4. 计算 V(s')
         with torch.no_grad():
+            # q_next_values: (B, SEQ_LEN, NUM_ACTIONS)
             q_next_values, _ = self.target_net(train_next_state_batch, h1)
-            q_next_max = q_next_values.max(1)[0].unsqueeze(1)
+            # q_next_max: (B, SEQ_LEN, 1)
+            q_next_max = q_next_values.max(2)[0].unsqueeze(2)
             
         # 5. 计算期望的Q值
         expected_q_s_a = reward_batch + (config.GAMMA * q_next_max * (1 - done_batch))

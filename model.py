@@ -46,14 +46,18 @@ class DRQN(nn.Module):
         # LSTM处理
         lstm_out, hidden = self.lstm(lstm_in, hidden)
         
-        # 只取序列最后的输出进行决策
+        # 在整个序列上应用全连接层
         # lstm_out shape: (batch_size, sequence_length, hidden_size)
-        # q_in shape: (batch_size, hidden_size)
-        q_in = lstm_out[:, -1, :]
+        # q_in shape: (batch_size * sequence_length, hidden_size)
+        q_in = lstm_out.contiguous().view(batch_size * seq_len, -1)
 
         # 全连接层输出Q值
         q_out = F.relu(self.fc1(q_in))
         q_values = self.fc2(q_out)
+        
+        # 恢复 batch 和 sequence 维度
+        # q_values shape: (batch_size, sequence_length, num_actions)
+        q_values = q_values.view(batch_size, seq_len, self.num_actions)
         
         return q_values, hidden
 

@@ -108,12 +108,18 @@ class SnakeGame:
             return state.T, reward, game_over, self.score
 
         # 4. 检查是否吃到食物并调整奖励
+        dist_after = np.linalg.norm(np.array(self.head) - np.array(self.food))
+
         if self.head == self.food:
             self.score += 1
-            reward = 10
+            reward = 10  # 吃到食物的大奖励
             self._place_food()
         else:
-            reward = -0.01 # 每走一步给予微小的惩罚，鼓励效率
+            # 根据与食物的距离变化来设置奖励
+            if dist_after < dist_before:
+                reward = 0.1  # 靠近食物
+            else:
+                reward = -0.2 # 远离食物
             self.snake.pop()
 
         self.snake.appendleft(self.head)

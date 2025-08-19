@@ -23,7 +23,7 @@ LEARNING_RATE = 0.0005      # 学习率
 # --- Epsilon-Greedy 策略参数 ---
 EPSILON_START = 1.0         # Epsilon 初始值
 EPSILON_END = 0.01          # Epsilon 最终值
-EPSILON_DECAY = 50000       # Epsilon 衰减步数
+EPSILON_DECAY = 20000       # Epsilon 衰减步数 (调整后)
 
 # --- 更新与保存 ---
 TARGET_UPDATE_FREQ = 100    # 目标网络更新频率 (每N个episodes)
