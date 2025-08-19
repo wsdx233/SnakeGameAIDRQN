@@ -74,32 +74,35 @@ class Agent:
         # 1. 从经验池中采样一个批次的序列（包含burn-in和training部分）
         full_seq_len = config.BURN_IN_LENGTH + config.SEQUENCE_LENGTH
         
-        # 向量化采样
+        # 从经验池中采样批次索引
         batch_indices = np.random.choice(
             np.arange(full_seq_len, len(self.memory)),
             size=config.BATCH_SIZE,
             replace=False
         )
 
-        # 使用高级索引和向量化操作一次性构建所有序列
-        # 创建一个索引矩阵，形状为 (BATCH_SIZE, full_seq_len)
-        # 每一行都是 [idx-full_seq_len, idx-full_seq_len+1, ..., idx-1]
-        indices = batch_indices[:, None] + np.arange(-full_seq_len, 0)
-        
-        # 将 memory 转换为 numpy 数组以便高效索引
-        memory_np = np.array(self.memory, dtype=object)
-        
-        # 一次性提取所有序列
-        # shape: (BATCH_SIZE, full_seq_len, 5)
-        sequences = memory_np[indices]
+        # 手动为批次构建序列，以避免numpy对象数组的类型问题
+        s_seqs_list, a_seqs_list, r_seqs_list, ns_seqs_list, d_seqs_list = [], [], [], [], []
 
-        # 解包并堆叠
-        # s_seqs shape: (BATCH_SIZE, full_seq_len, C, H, W)
-        s_seqs = np.stack(sequences[:, :, 0]).astype(np.float32)
-        a_seqs = np.stack(sequences[:, :, 1])
-        r_seqs = np.stack(sequences[:, :, 2]).astype(float)
-        ns_seqs = np.stack(sequences[:, :, 3]).astype(np.float32)
-        d_seqs = np.stack(sequences[:, :, 4]).astype(bool)
+        for idx in batch_indices:
+            # 提取一个完整的序列
+            full_sequence = [self.memory[i] for i in range(idx - full_seq_len, idx)]
+            
+            # 解压元组序列
+            s, a, r, ns, d = zip(*full_sequence)
+            
+            s_seqs_list.append(s)
+            a_seqs_list.append(a)
+            r_seqs_list.append(r)
+            ns_seqs_list.append(ns)
+            d_seqs_list.append(d)
+
+        # 将列表转换为Numpy数组
+        s_seqs = np.array(s_seqs_list, dtype=np.float32)
+        a_seqs = np.array(a_seqs_list)
+        r_seqs = np.array(r_seqs_list, dtype=np.float32)
+        ns_seqs = np.array(ns_seqs_list, dtype=np.float32)
+        d_seqs = np.array(d_seqs_list, dtype=bool)
 
         # 分割 burn-in 和 training 部分
         burn_in_state_batch = torch.from_numpy(s_seqs[:, :config.BURN_IN_LENGTH]).float().to(config.DEVICE)
